@@ -316,7 +316,7 @@
     <p><b>Features:</b> search_volume, competition, cpc, backlinks, content_type, main_intent, word_count (from <span class="mono">dim_content</span>); avg_position, engaged_sessions, scroll_events (aggregated, from <span class="mono">fact_content_daily_performance</span>). Skewed numeric features log-transformed; categoricals one-hot encoded.</p>
     <p><b>Baseline:</b> linear regression predicting CTR from average position alone — the simplest defensible bar, since position is the best-known standalone CTR driver.</p>
     <p><b>Model:</b> Random Forest Regressor (scikit-learn), run in three configurations: all signals → CTR, content/engagement signals only (position excluded) → CTR, and content/engagement signals → avg_position directly.</p>
-    <p><b>Validation:</b> random 80/20 content-level split (42,728 held-out test items).</p>
+    <p><b>Validation:</b> random 80/20 content-level split (166,908 train / 41,728 held-out test items).</p>
     <div class="callout warn">
       <span class="k">Correction from the original plan</span>
       A time-aware split was originally planned, but the performance table was already aggregated to
@@ -411,7 +411,7 @@
     <div class="callout warn"><span class="k">Single-month snapshot</span>The planned time-aware split wasn't used, since the data was already aggregated to one row per item per month — the actual split is a random content-level split. The model speaks to one cross-section, not trends over time.</div>
     <div class="callout warn"><span class="k">Unbalanced panel</span>Per-client GSC/GA4 history depth differs, so June 2026 isn't equally represented across all clients in the warehouse.</div>
     <div class="callout warn"><span class="k">Roughly half the content excluded</span>~49% of content items had zero recorded impressions and were dropped — this analysis says nothing about why that half isn't visible at all.</div>
-    <div class="callout warn"><span class="k">Uneven category sizes</span><span class="mono">content_type_feedly article</span> shows high importance despite being a much smaller category than <span class="mono">keyword article</span> — a caveat, not a confident generalizable finding.</div>
+    <div class="callout warn"><span class="k">Uneven category sizes, now verified</span><span class="mono">content_type</span> distribution: keyword article 189,386 (90.8%), feedly article 15,943 (7.6%), comparison article 3,307 (1.6%). <span class="mono">feedly article</span>'s high importance is a real signal from a genuinely small subgroup (~7.6% of items) — worth testing on a larger feedly-article sample before treating it as a broadly generalizable finding.</div>
     <div class="callout warn"><span class="k">No algorithmic claims</span>Nothing here claims to reveal or reverse-engineer any search engine's ranking algorithm — only correlational patterns in this dataset's own recorded outcomes.</div>
   </section>
 
