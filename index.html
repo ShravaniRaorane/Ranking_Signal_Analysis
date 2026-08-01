@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Which Signals Predict Search Visibility? — A FlyRank Capstone</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F2F5F1;
+    --paper-alt:#E7ECE5;
+    --ink:#12201A;
+    --muted:#56645C;
+    --line:#D7DED6;
+    --signal:#1F7A5C;
+    --signal-soft:#BFE3D4;
+    --warn:#B5482E;
+    --warn-soft:#F0DAD2;
+    --max:840px;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--paper);
+    color:var(--ink);
+    font-family:'Source Serif 4', Georgia, serif;
+    font-size:18px;
+    line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--signal);}
+  .mono{font-family:'JetBrains Mono', monospace;}
+  .display{font-family:'Space Grotesk', sans-serif;}
+
+  /* ---------- Layout shell ---------- */
+  .wrap{max-width:var(--max); margin:0 auto; padding:0 28px;}
+  header.masthead{
+    border-bottom:1px solid var(--line);
+    padding:18px 0;
+    position:sticky; top:0;
+    background:rgba(242,245,241,0.92);
+    backdrop-filter:blur(6px);
+    z-index:10;
+  }
+  .masthead-inner{
+    max-width:var(--max); margin:0 auto; padding:0 28px;
+    display:flex; justify-content:space-between; align-items:baseline;
+    font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:.06em;
+    color:var(--muted); text-transform:uppercase;
+  }
+  .masthead-inner .tag{color:var(--signal); font-weight:700;}
+
+  /* ---------- Hero ---------- */
+  .hero{padding:64px 0 40px; border-bottom:1px solid var(--line);}
+  .eyebrow{
+    font-family:'JetBrains Mono', monospace; font-size:12px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--signal); font-weight:700; margin-bottom:18px;
+  }
+  h1.title{
+    font-family:'Space Grotesk', sans-serif;
+    font-size:clamp(30px, 5vw, 44px);
+    line-height:1.15; font-weight:600; margin:0 0 22px; letter-spacing:-0.01em;
+  }
+  .abstract{color:var(--muted); font-size:19px; max-width:70ch;}
+  .meta-row{
+    display:flex; gap:28px; flex-wrap:wrap; margin-top:28px;
+    font-family:'JetBrains Mono', monospace; font-size:12px; color:var(--muted);
+  }
+  .meta-row div{border-left:2px solid var(--signal); padding-left:10px;}
+  .meta-row b{display:block; color:var(--ink); font-size:14px;}
+
+  /* ---------- Signal panel (signature element) ---------- */
+  .signal-panel{
+    margin-top:36px; border:1px solid var(--line); background:var(--paper-alt);
+    border-radius:2px; padding:22px 24px;
+  }
+  .signal-panel h3{
+    font-family:'JetBrains Mono', monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:.1em; color:var(--muted); margin:0 0 16px; font-weight:700;
+  }
+  .meter-row{display:flex; align-items:center; gap:14px; margin-bottom:12px;}
+  .meter-label{
+    width:190px; flex-shrink:0; font-family:'JetBrains Mono', monospace;
+    font-size:12.5px; color:var(--ink);
+  }
+  .meter-track{flex:1; height:10px; background:#DCE3DA; border-radius:1px; overflow:hidden;}
+  .meter-fill{height:100%; background:var(--signal); border-radius:1px;}
+  .meter-val{
+    width:52px; text-align:right; font-family:'JetBrains Mono', monospace;
+    font-size:12.5px; color:var(--muted); flex-shrink:0;
+  }
+  .signal-panel .note{margin-top:14px; font-size:13px; color:var(--muted); font-family:'JetBrains Mono', monospace; line-height:1.5;}
+
+  /* ---------- Sections ---------- */
+  section.paper-section{padding:56px 0; border-bottom:1px solid var(--line);}
+  section.paper-section:last-of-type{border-bottom:none;}
+  .sec-head{display:flex; align-items:baseline; gap:16px; margin-bottom:24px;}
+  .sec-num{
+    font-family:'JetBrains Mono', monospace; font-size:14px; color:var(--signal);
+    font-weight:700; flex-shrink:0;
+  }
+  h2.sec-title{
+    font-family:'Space Grotesk', sans-serif; font-size:26px; font-weight:600; margin:0;
+    letter-spacing:-0.005em;
+  }
+  p{margin:0 0 18px;}
+  .lede{font-size:19px; color:var(--ink);}
+
+  /* ---------- Tables ---------- */
+  table{width:100%; border-collapse:collapse; margin:20px 0 28px; font-size:15.5px;}
+  th, td{
+    text-align:left; padding:10px 12px; border-bottom:1px solid var(--line);
+    font-family:'JetBrains Mono', monospace; font-size:14px;
+  }
+  th{
+    font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted);
+    border-bottom:2px solid var(--ink); font-weight:700;
+  }
+  td.hero-num{color:var(--signal); font-weight:700;}
+  .table-wrap{overflow-x:auto;}
+  caption{
+    caption-side:bottom; text-align:left; font-family:'JetBrains Mono', monospace;
+    font-size:12px; color:var(--muted); padding-top:8px;
+  }
+
+  /* ---------- Callouts ---------- */
+  .callout{
+    border-left:3px solid var(--signal); background:var(--paper-alt);
+    padding:16px 20px; margin:24px 0; font-size:16.5px;
+  }
+  .callout.warn{border-left-color:var(--warn); background:var(--warn-soft);}
+  .callout .k{
+    font-family:'JetBrains Mono', monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--muted); display:block; margin-bottom:6px; font-weight:700;
+  }
+
+  /* ---------- Figures ---------- */
+  figure{margin:28px 0;}
+  figure img{width:100%; display:block; border:1px solid var(--line); background:#fff;}
+  figcaption{
+    font-family:'JetBrains Mono', monospace; font-size:12.5px; color:var(--muted);
+    margin-top:8px; line-height:1.5;
+  }
+  .fig-missing{
+    border:1px dashed var(--line); padding:26px; text-align:center;
+    font-family:'JetBrains Mono', monospace; font-size:13px; color:var(--muted); background:#fff;
+  }
+
+  /* ---------- Recommendation list ---------- */
+  .rec{
+    display:grid; grid-template-columns:44px 1fr; gap:16px; padding:20px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .rec:last-child{border-bottom:none;}
+  .rec-num{
+    font-family:'Space Grotesk', sans-serif; font-weight:700; font-size:22px; color:var(--signal);
+  }
+  .rec h4{
+    font-family:'Space Grotesk', sans-serif; font-size:17px; margin:0 0 6px; font-weight:600;
+  }
+  .rec p{font-size:16px; margin:0; color:var(--ink);}
+  .rec .conf{
+    display:inline-block; margin-top:8px; font-family:'JetBrains Mono', monospace;
+    font-size:11px; text-transform:uppercase; letter-spacing:.06em; padding:2px 8px;
+    border:1px solid var(--signal); color:var(--signal); border-radius:20px;
+  }
+  .rec .conf.follow{border-color:var(--warn); color:var(--warn);}
+
+  /* ---------- Footer ---------- */
+  footer{padding:48px 0 80px; font-size:14.5px; color:var(--muted);}
+  footer a{color:var(--ink); text-decoration:underline;}
+  .credit-box{
+    margin-top:20px; padding:18px 20px; border:1px solid var(--line); background:var(--paper-alt);
+    font-family:'JetBrains Mono', monospace; font-size:13px;
+  }
+  .toc{
+    display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:22px;
+    font-family:'JetBrains Mono', monospace; font-size:12.5px;
+  }
+  .toc a{color:var(--muted); text-decoration:none; border-bottom:1px dotted var(--muted);}
+  .toc a:hover{color:var(--signal); border-color:var(--signal);}
+
+  @media (max-width:600px){
+    body{font-size:16.5px;}
+    .meter-label{width:120px; font-size:11px;}
+  }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <span>FlyRank ML Internship &middot; Search Intelligence Capstone</span>
+    <span class="tag">Ranking Signal Analysis</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">Research Paper</div>
+    <h1 class="title">Which search and engagement signals are most strongly associated with high search visibility — and how can these insights prioritize SEO optimization?</h1>
+    <p class="abstract">
+      This paper studies content-level and engagement signals in a pseudonymized warehouse of
+      <span class="mono">208,636</span> content items, testing which signals associate with two
+      related outcomes: raw search visibility (average position) and click-through rate (CTR). A
+      Random Forest model explains up to <b>25.5%</b> of visibility variance and <b>21.5%</b> of CTR
+      variance — both well above naive baselines. Word count, content type, and scroll engagement
+      emerge as the consistent top signals across both outcomes, while backlinks, search volume,
+      competition, and CPC show little independent association with either. The findings are offered
+      as decision-support for content prioritization, not causal proof.
+    </p>
+
+    <div class="meta-row">
+      <div><b>81.8M</b>rows in source warehouse</div>
+      <div><b>208,636</b>content items modeled</div>
+      <div><b>June 2026</b>analysis window</div>
+      <div><b>v20260703</b>release version</div>
+    </div>
+
+    <div class="signal-panel">
+      <h3>Signal Strength Readout — Top predictors, no-position CTR model</h3>
+      <div class="meter-row">
+        <div class="meter-label">word_count</div>
+        <div class="meter-track"><div class="meter-fill" style="width:45%"></div></div>
+        <div class="meter-val">45.0%</div>
+      </div>
+      <div class="meter-row">
+        <div class="meter-label">content_type (feedly)</div>
+        <div class="meter-track"><div class="meter-fill" style="width:31.3%"></div></div>
+        <div class="meter-val">31.3%</div>
+      </div>
+      <div class="meter-row">
+        <div class="meter-label">scroll_events (log)</div>
+        <div class="meter-track"><div class="meter-fill" style="width:21.3%"></div></div>
+        <div class="meter-val">21.3%</div>
+      </div>
+      <div class="meter-row">
+        <div class="meter-label">all other signals</div>
+        <div class="meter-track"><div class="meter-fill" style="width:2.4%"></div></div>
+        <div class="meter-val">2.4%</div>
+      </div>
+      <div class="note">Random Forest feature importance, position excluded — combined 97.6% of predictive weight sits in just three signals.</div>
+    </div>
+
+    <div class="toc">
+      <a href="#question">01 Question</a>
+      <a href="#data">02 Data</a>
+      <a href="#methodology">03 Methodology</a>
+      <a href="#results">04 Results</a>
+      <a href="#limitations">05 Limitations</a>
+      <a href="#recommendations">06 Recommendations</a>
+      <a href="#reproducibility">07 Reproducibility</a>
+    </div>
+  </section>
+
+  <section class="paper-section" id="question">
+    <div class="sec-head"><span class="sec-num">01</span><h2 class="sec-title">Introduction &amp; Problem Statement</h2></div>
+    <p class="lede">Which search and engagement signals are most strongly associated with high search visibility, and how can these insights help prioritize SEO optimization?</p>
+    <p>
+      Content teams manage far more pages than they can manually optimize. Given a limited editing
+      budget, which properties of a page — its length, type, or on-page engagement — are worth
+      auditing first? This paper treats that as a measurable question rather than a matter of
+      intuition: it separates two related but distinct outcomes — <b>visibility</b> (how well a page
+      ranks, measured by average search position) and <b>conversion of that visibility</b> (CTR, how
+      often an impression becomes a click) — and asks which signals predict each.
+    </p>
+    <div class="callout">
+      <span class="k">Decision this supports</span>
+      Prioritizing which content properties a team should review or test first, out of a large
+      library, using observed associations rather than uniform across-the-board effort.
+    </div>
+  </section>
+
+  <section class="paper-section" id="data">
+    <div class="sec-head"><span class="sec-num">02</span><h2 class="sec-title">Data</h2></div>
+    <p>
+      <b>Release:</b> FlyRank Internship Pseudonymized Warehouse, version <span class="mono">v20260703</span>
+      — a frozen snapshot exported 2026-07-03. All client, content, and query identifiers are salted,
+      namespaced, fingerprinted hashes; no raw client names, domains, URLs, or queries appear anywhere
+      in this release.
+    </p>
+    <p><b>Tables used:</b></p>
+    <ul>
+      <li><span class="mono">dim_content</span> (519,606 rows) — content-level signals: search volume, competition, CPC, backlinks, content type, main intent, word count, last-optimized date.</li>
+      <li><span class="mono">fact_content_daily_performance_sample.parquet</span> — the latest full month, aggregated to one row per content item: impressions, clicks, average position, engaged sessions, scroll events.</li>
+    </ul>
+    <p>
+      <b>Date window:</b> confirmed directly from the data (not assumed from documentation) —
+      <span class="mono">2026-06-01</span> through <span class="mono">2026-06-30</span>.
+    </p>
+    <p><b>Excluded, and why:</b></p>
+    <ul>
+      <li><span class="mono">dim_clients</span> — dropped after joining; the analysis is content-level, not client-level.</li>
+      <li><span class="mono">fact_content_query_90d</span> — out of scope for this lane; better suited to query/CTR-specific analyses.</li>
+      <li>Full 78.8M-row daily history — a single representative month is sufficient for signal-association analysis and avoids unnecessary re-aggregation cost.</li>
+      <li>Content items with zero recorded GSC impressions (200,569 of 409,205 aggregated rows, ~49%) — these have no measurable CTR/position and would bias the model if imputed rather than excluded. This excluded group is a distinct problem, addressed separately in Recommendations.</li>
+    </ul>
+    <div class="callout warn">
+      <span class="k">Known limitation, from the source dataset</span>
+      This is an unbalanced panel — per-client GSC/GA4 history depth differs — so June 2026 is not
+      equally represented across all clients in this warehouse.
+    </div>
+  </section>
+
+  <section class="paper-section" id="methodology">
+    <div class="sec-head"><span class="sec-num">03</span><h2 class="sec-title">Methodology</h2></div>
+    <p><b>Assumptions:</b> content-level signals (search volume, competition, backlinks, freshness) are treated as properties of a page going into the window, not outcomes of that month's performance — this keeps the analysis from being circular.</p>
+    <p><b>Labels (two outcomes modeled):</b></p>
+    <ul>
+      <li><span class="mono">ctr</span> = total_clicks / total_impressions, aggregated per content item.</li>
+      <li><span class="mono">avg_position</span> = mean GSC average position per content item — a direct visibility measure.</li>
+    </ul>
+    <p><b>Features:</b> search_volume, competition, cpc, backlinks, content_type, main_intent, word_count (from <span class="mono">dim_content</span>); avg_position, engaged_sessions, scroll_events (aggregated, from <span class="mono">fact_content_daily_performance</span>). Skewed numeric features log-transformed; categoricals one-hot encoded.</p>
+    <p><b>Baseline:</b> linear regression predicting CTR from average position alone — the simplest defensible bar, since position is the best-known standalone CTR driver.</p>
+    <p><b>Model:</b> Random Forest Regressor (scikit-learn), run in three configurations: all signals → CTR, content/engagement signals only (position excluded) → CTR, and content/engagement signals → avg_position directly.</p>
+    <p><b>Validation:</b> random 80/20 content-level split (42,728 held-out test items).</p>
+    <div class="callout warn">
+      <span class="k">Correction from the original plan</span>
+      A time-aware split was originally planned, but the performance table was already aggregated to
+      one row per content item per month before modeling — leaving no day-level time axis to split on.
+      The actual split used is a random content-level split. Noted here rather than silently revised.
+    </div>
+    <p><b>Leakage checks:</b> confirmed avg_position is a separate GSC metric, not derived from CTR; confirmed no content item appears in both train and test; excluded any same-window metric that could only be known after the fact relative to the label being predicted.</p>
+  </section>
+
+  <section class="paper-section" id="results">
+    <div class="sec-head"><span class="sec-num">04</span><h2 class="sec-title">Results (vs Baseline)</h2></div>
+    <p>All models evaluated on the same held-out test split. Two outcomes modeled: CTR and average position (visibility).</p>
+
+    <div class="table-wrap">
+      <table>
+        <caption>CTR models — 41,728 held-out content items</caption>
+        <thead><tr><th>Model</th><th>Features</th><th>RMSE</th><th>R&sup2;</th></tr></thead>
+        <tbody>
+          <tr><td>Baseline (linear)</td><td>avg_position only</td><td>0.0353</td><td>0.011</td></tr>
+          <tr><td>Random Forest</td><td>all signals</td><td>0.0314</td><td class="hero-num">0.215</td></tr>
+          <tr><td>Random Forest</td><td>no position</td><td>0.0330</td><td class="hero-num">0.133</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <caption>Visibility (position) model — same split</caption>
+        <thead><tr><th>Model</th><th>Features</th><th>RMSE</th><th>R&sup2;</th></tr></thead>
+        <tbody>
+          <tr><td>Random Forest</td><td>content + engagement signals</td><td>19.87</td><td class="hero-num">0.255</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <figure>
+      <img src="assets/artifact_1_ctr_model_comparison.png" alt="Bar chart comparing R-squared across baseline and Random Forest CTR models" onerror="this.parentElement.innerHTML='<div class=&quot;fig-missing&quot;>Missing: assets/artifact_1_ctr_model_comparison.png — add this file from your notebook export.</div>'">
+      <figcaption>Fig. 1 — CTR prediction: baseline vs Random Forest, R&sup2; comparison.</figcaption>
+    </figure>
+
+    <p>
+      The position-only linear baseline explains almost none of CTR's variance (R&sup2; = 0.011) —
+      the position–CTR relationship is not well captured by a straight line. The full Random Forest
+      roughly doubles this to 0.215, and even with position excluded, content/engagement signals alone
+      still explain 0.133 — showing they carry value independent of ranking position. Notably, the
+      same signals predict visibility itself (position, R&sup2; = 0.255) even better than they predict
+      CTR without position — content-level signals appear more tied to <i>getting found</i> than to
+      <i>converting</i> that visibility into clicks.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <caption>Signal correlation with avg_position (negative = associated with better visibility)</caption>
+        <thead><tr><th>Signal</th><th>Correlation</th></tr></thead>
+        <tbody>
+          <tr><td>log_scroll_events</td><td>&minus;0.187</td></tr>
+          <tr><td>log_search_volume</td><td>+0.123</td></tr>
+          <tr><td>log_engaged_sessions</td><td>&minus;0.110</td></tr>
+          <tr><td>word_count</td><td>&minus;0.106</td></tr>
+          <tr><td>cpc</td><td>+0.082</td></tr>
+          <tr><td>competition</td><td>+0.056</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <figure>
+      <img src="assets/artifact_2_ctr_feature_importance.png" alt="Bar chart of top signals predicting CTR, all features" onerror="this.parentElement.innerHTML='<div class=&quot;fig-missing&quot;>Missing: assets/artifact_2_ctr_feature_importance.png — add this file from your notebook export.</div>'">
+      <figcaption>Fig. 2 — Top signals predicting CTR (all features; avg_position dominates at ~83%).</figcaption>
+    </figure>
+
+    <figure>
+      <img src="assets/artifact_3_position_feature_importance.png" alt="Bar chart of top signals predicting search visibility (position)" onerror="this.parentElement.innerHTML='<div class=&quot;fig-missing&quot;>Missing: assets/artifact_3_position_feature_importance.png — add this file from your notebook export.</div>'">
+      <figcaption>Fig. 3 — Top signals predicting search visibility (avg_position).</figcaption>
+    </figure>
+
+    <p><b>Top opportunity pages</b> — content already reasonably visible (position &le; 20) but underperforming its predicted CTR. Loaded live from the notebook export:</p>
+    <div class="table-wrap">
+      <table id="opportunity-table">
+        <thead><tr><th>Content ID</th><th>Position</th><th>CTR</th><th>Predicted CTR</th><th>Word Count</th><th>Type</th></tr></thead>
+        <tbody id="opportunity-body">
+          <tr><td colspan="6" class="mono" style="color:var(--muted);">Loading assets/artifact_5_top_opportunity_pages.csv…</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="paper-section" id="limitations">
+    <div class="sec-head"><span class="sec-num">05</span><h2 class="sec-title">Limitations &amp; Honest Framing</h2></div>
+
+    <div class="callout warn"><span class="k">Association, not causation</span>The model identifies signals that move together with CTR and position — it does not establish that changing them causes visibility or clicks to change.</div>
+    <div class="callout warn"><span class="k">Most variance unexplained</span>R&sup2; peaks at 0.255. CTR and position remain driven by factors this dataset can't observe: query intent, SERP features, brand recognition, title/meta quality.</div>
+    <div class="callout warn"><span class="k">Single-month snapshot</span>The planned time-aware split wasn't used, since the data was already aggregated to one row per item per month — the actual split is a random content-level split. The model speaks to one cross-section, not trends over time.</div>
+    <div class="callout warn"><span class="k">Unbalanced panel</span>Per-client GSC/GA4 history depth differs, so June 2026 isn't equally represented across all clients in the warehouse.</div>
+    <div class="callout warn"><span class="k">Roughly half the content excluded</span>~49% of content items had zero recorded impressions and were dropped — this analysis says nothing about why that half isn't visible at all.</div>
+    <div class="callout warn"><span class="k">Uneven category sizes</span><span class="mono">content_type_feedly article</span> shows high importance despite being a much smaller category than <span class="mono">keyword article</span> — a caveat, not a confident generalizable finding.</div>
+    <div class="callout warn"><span class="k">No algorithmic claims</span>Nothing here claims to reveal or reverse-engineer any search engine's ranking algorithm — only correlational patterns in this dataset's own recorded outcomes.</div>
+  </section>
+
+  <section class="paper-section" id="recommendations">
+    <div class="sec-head"><span class="sec-num">06</span><h2 class="sec-title">Ranked Recommendations</h2></div>
+    <p>Ordered by strength of observed association across both outcomes. Framed as decision-support — testable hypotheses to prioritize, not guaranteed outcomes.</p>
+
+    <div class="rec">
+      <div class="rec-num">01</div>
+      <div><h4>Review and expand thin content</h4><p>word_count is the top driver of visibility (61.5% importance) and the top content signal for CTR once position is excluded (45%). Highest-confidence, most actionable lever identified.</p><span class="conf">High confidence</span></div>
+    </div>
+    <div class="rec">
+      <div class="rec-num">02</div>
+      <div><h4>Prioritize by content type, not uniformly</h4><p>content_type shows strong independent association with both visibility (14.7%) and CTR (31%). Audit performance by content type before applying blanket changes across the library.</p><span class="conf">High confidence</span></div>
+    </div>
+    <div class="rec">
+      <div class="rec-num">03</div>
+      <div><h4>Treat scroll/engagement as a feedback loop, not a lever yet</h4><p>Scroll events correlate with better position (&minus;0.187) and CTR, but engagement happens after a click — this may reflect well-ranked content attracting engagement, not the reverse. Flagged for follow-up research.</p><span class="conf follow">Needs follow-up</span></div>
+    </div>
+    <div class="rec">
+      <div class="rec-num">04</div>
+      <div><h4>Treat search volume and competition as context, not levers</h4><p>Higher search volume associates with worse position (+0.123), consistent with high-volume keywords being more competitive. Useful for interpretation, not something a content team can directly change.</p><span class="conf follow">Context only</span></div>
+    </div>
+    <div class="rec">
+      <div class="rec-num">05</div>
+      <div><h4>Don't treat position as a standalone target</h4><p>Position dominates CTR feature importance (~83%) but a position-only model barely explains CTR alone (R&sup2; = 0.011). Pair ranking efforts with content-quality signals above.</p><span class="conf">High confidence</span></div>
+    </div>
+    <div class="rec">
+      <div class="rec-num">06</div>
+      <div><h4>Deprioritize backlinks and CPC as CTR/visibility levers</h4><p>Both show under 5% importance across every model version in this analysis — lower priority relative to content-level signals for these two outcomes specifically.</p><span class="conf">High confidence</span></div>
+    </div>
+    <div class="rec">
+      <div class="rec-num">07</div>
+      <div><h4>Separately audit the ~49% of invisible content</h4><p>This analysis only covers content with measurable visibility. The excluded half of the library is a distinct, likely higher-impact problem worth its own investigation.</p><span class="conf follow">Next study</span></div>
+    </div>
+  </section>
+
+  <section class="paper-section" id="reproducibility">
+    <div class="sec-head"><span class="sec-num">07</span><h2 class="sec-title">Reproducibility</h2></div>
+    <p>All notebooks and the modeling code referenced in this paper are versioned in the project repository:</p>
+    <ul>
+      <li><span class="mono">work/notebooks/ranking_signal_analysis.ipynb</span> — data load, joins, feature prep, baseline, Random Forest (all 3 configurations), artifact generation.</li>
+      <li><span class="mono">work/notebooks/capstone.ipynb</span> — narrative write-up of the process, decisions, and corrections made along the way.</li>
+      <li><span class="mono">submission/paper_url.txt</span> — the deployed URL of this page.</li>
+    </ul>
+    <p><a href="https://github.com/ShravaniRaorane/FLYRANK-" target="_blank" rel="noopener">github.com/ShravaniRaorane/FLYRANK-</a></p>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <p>Public rule followed throughout: no client names, domains, URLs, private queries, credentials, raw exports, or claims that prove any search engine's ranking algorithm.</p>
+    <div class="credit-box">
+      Built on the FlyRank ML Internship dataset — <a href="https://flyrank.ai" target="_blank" rel="noopener">flyrank.ai</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+// Load the real opportunity-pages CSV if present alongside this page (assets/).
+// Falls back silently to a helpful placeholder message if the file isn't deployed yet.
+fetch('assets/artifact_5_top_opportunity_pages.csv')
+  .then(r => { if(!r.ok) throw new Error('missing'); return r.text(); })
+  .then(text => {
+    const rows = text.trim().split('\n').slice(1); // skip header
+    const body = document.getElementById('opportunity-body');
+    if(rows.length === 0 || (rows.length===1 && rows[0]==='')) throw new Error('empty');
+    body.innerHTML = rows.map(row => {
+      const cols = row.split(',');
+      const [id, pos, ctr, ctrPred, wc, type] = cols;
+      return `<tr><td>${id}</td><td>${parseFloat(pos).toFixed(1)}</td><td>${parseFloat(ctr).toFixed(4)}</td><td>${parseFloat(ctrPred).toFixed(4)}</td><td>${wc}</td><td>${type}</td></tr>`;
+    }).join('');
+  })
+  .catch(() => {
+    document.getElementById('opportunity-body').innerHTML =
+      '<tr><td colspan="6" class="mono" style="color:var(--muted);">Add artifact_5_top_opportunity_pages.csv to /assets to populate this table.</td></tr>';
+  });
+</script>
+
+</body>
+</html>
