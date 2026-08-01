@@ -1,0 +1,5 @@
+Model,Target,RMSE,R2
+"Baseline (position only, linear)",CTR,0.03528830205179318,0.011291760332726608
+Random Forest - CTR (all signals),CTR,0.03144928650520417,0.214713334233814
+Random Forest - CTR (no position),CTR,0.03304559087257659,0.1329709026638367
+Random Forest - Position (visibility),avg_position,19.86861843993947,0.2546053648809018
